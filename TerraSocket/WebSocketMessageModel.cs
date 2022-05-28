@@ -23,8 +23,8 @@
         {
             public SemVersion()
             {
-                MajorVersion = 0;
-                MinorVersion = 6;
+                MajorVersion = 1;
+                MinorVersion = 0;
                 PatchVersion = 0;
             }
             public int MajorVersion { get; set; }

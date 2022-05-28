@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
+using System;
 using System.IO;
 using System.Reflection;
 using Terraria;
@@ -19,9 +21,34 @@ namespace TerraSocket
         public static void StartWebSocketPreLaunch(string[] args, bool monoArgs = false)
         {
             string ipPath = Path.Combine(Directory.GetCurrentDirectory(), "wsipconfig.json");
-            Logger.Info(ipPath);
-            _server = new WebSocketServerHelper();
+            ConfigModel config;
+            if (File.Exists(ipPath))
+            {
+                string ipcontent = File.ReadAllText(ipPath);
+                try
+                {
+                    config = JsonConvert.DeserializeObject<ConfigModel>(ipcontent);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error("Invalid content in wsipconfig.json", e);
+                    config = DefaultIp();
+                    File.WriteAllText(ipPath, JsonConvert.SerializeObject(config));//TODO: make it nice!
+                }
+            }
+            else
+            {
+                config = DefaultIp();
+                File.WriteAllText(ipPath, JsonConvert.SerializeObject(config));//TODO: make it nice!
+            }
+            _server = new WebSocketServerHelper(config.Host, config.Port);
         }
+
+        private static ConfigModel DefaultIp()
+        {
+            return new ConfigModel() {Host = "127.0.0.1", Port = 7394 };
+        }
+
 
         //Stop WS server on "exit"
         [HarmonyPostfix]
@@ -75,102 +102,6 @@ namespace TerraSocket
                 _server.SendWSMessage(new WebSocketMessageModel("NPCKill", true, new WebSocketMessageModel.ContextInfo(playerName, new WebSocketMessageModel.ContextInfo.ContextNPCKilled(npcName, item.HoverName, null, item.Name, playerName, npc.life + damage, npc.life))));
             }
         }
-
-        [HarmonyPatch]
-        public class MainMenuPatch
-        {
-            public static MethodBase TargetMethod()
-            {
-                return typeof(Main).GetMethod("DrawVersionNumber", BindingFlags.NonPublic | BindingFlags.Static);
-            }
-            public static void Postfix(Color menuColor)
-            {
-                Helper.DrawModOnMenu(menuColor);
-            }
-        }
-        /*
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(Player), nameof(Player.Update))]
-        public static void EventsPostfix(int i)
-        {            
-            
-            if (BirthdayParty.PartyIsUp)
-            {
-                if (!EventIsPartyUp)
-                {
-                    EventIsPartyUp = true;
-                    _server.SendWSMessage(new WebSocketMessageModel("PartyEvent", true));
-                }
-            }
-            else
-            {
-                EventIsPartyUp = false;
-            }
-
-            if (Sandstorm.Happening)
-            {
-                if (!EventIsSandstormThere)
-                {
-                    EventIsSandstormThere = true;
-                    _server.SendWSMessage(new WebSocketMessageModel("SandstormEvent", true));
-                }
-            }
-            else
-            {
-                EventIsSandstormThere = false;
-            }
-
-            if (DD2Event.Ongoing)
-            {
-                if (!EventIsDD2There)
-                {
-                    _server.SendWSMessage(new WebSocketMessageModel("DD2Event", true));
-                }
-            }
-            else
-            {
-                EventIsDD2There = false;
-            }
-
-            if (Main.pumpkinMoon)
-            {
-                if (!EventIsPumpkinMoonThere)
-                {
-                    EventIsPumpkinMoonThere = true;
-                    _server.SendWSMessage(new WebSocketMessageModel("PumpkinMoonEvent", true));
-                }
-            }
-            else
-            {
-                EventIsPumpkinMoonThere = false;
-            }
-
-            if (Main.snowMoon)
-            {
-                if (!EventIsSnowMoonThere)
-                {
-                    EventIsSnowMoonThere = true;
-                    _server.SendWSMessage(new WebSocketMessageModel("SnowMoonEvent", true));
-                }
-            }
-            else
-            {
-                EventIsSnowMoonThere = false;
-            }<dnsy
-
-            if (Main.bloodMoon)
-            {
-                if (!EventIsBloodMoonThere)
-                {
-                    EventIsBloodMoonThere = true;
-                    _server.SendWSMessage(new WebSocketMessageModel("BloodMoonEvent", true));
-                }
-            }
-            else
-            {
-                EventIsBloodMoonThere = false;
-            }
-        } */
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(NPC), nameof(NPC.NewNPC))]
@@ -231,7 +162,20 @@ namespace TerraSocket
     }
 
     [HarmonyPatch]
-    class updatePatch
+    public class MainMenuPatch
+    {
+        public static MethodBase TargetMethod()
+        {
+            return typeof(Main).GetMethod("DrawVersionNumber", BindingFlags.NonPublic | BindingFlags.Static);
+        }
+        public static void Postfix(Color menuColor)
+        {
+            Helper.DrawModOnMenu(menuColor);
+        }
+    }
+
+    [HarmonyPatch]
+    class UpdatePatch
     {
         public static bool EventIsPartyUp { get; private set; } = false;
         public static bool EventIsSandstormThere { get; private set; } = false;
@@ -321,20 +265,6 @@ namespace TerraSocket
             {
                 EventIsBloodMoonThere = false;
             }
-        }
-    }
-
-
-
-
-    public class UpdatePatch : Game
-    {
-        
-        protected override void Update(GameTime gameTime)
-        {
-
-            
-            base.Update(gameTime);
         }
     }
 }

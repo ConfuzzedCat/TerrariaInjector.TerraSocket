@@ -8,3 +8,13 @@
         public int HealAmount { get; set; }
     }
 }
+
+
+/*
+{
+    "UserName": "userName",
+    "Command":"KillPlayer",
+    "ItemID" :1,
+    "HealAmount" :10
+}
+*/

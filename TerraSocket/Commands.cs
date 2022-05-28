@@ -9,30 +9,6 @@ namespace TerraSocket
 {
     public static class Commands
     {
-        public static void CommandHandler(CommandModel cm)
-        {
-            try
-            {
-                switch (cm.Command.ToLower())
-                {
-                    case "giveitem":
-                        GiveItem(cm.UserName, cm.ItemID);
-                        break;
-                    case "killplayer":
-                        KillPlayer(cm.UserName);
-                        break;
-                    case "healplayer":
-                        HealPlayer(cm.UserName, cm.HealAmount);
-                        break;
-                    default:
-                        throw new Exception($"Unknown command. {cm.Command}.");
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error("Error while parsing command", e);
-            }
-        }
         public static void CommandHandler(string response)
         {
             try
@@ -57,7 +33,6 @@ namespace TerraSocket
             {
                 Logger.Error("Error while parsing command", e);
             }
-
         }
 
         public static void GiveItem(string sourceUser, int id)
@@ -85,6 +60,7 @@ namespace TerraSocket
                 ChatHelper.DisplayMessageOnClient(text, Color.Red, Main.myPlayer);
                 Player player = Main.player[Main.myPlayer];
                 Helper.SpawnKillNpc(player.Center.X, player.Center.Y, 68);
+
             }
             catch (Exception e)
             {

@@ -94,7 +94,7 @@ namespace TerraSocket
                 Main.npc[num].position.X = (Main.player[Main.myPlayer].Center.X - Main.npc[num].width / 2);
                 Main.npc[num].position.Y = Main.player[Main.myPlayer].Center.Y - Main.npc[num].height;
                 Main.npc[num].active = true;
-                Main.npc[num].timeLeft = (int)(10 * 1.25);
+                Main.npc[num].timeLeft = 1;
                 Main.npc[num].wet = Collision.WetCollision(Main.npc[num].position, Main.npc[num].width, Main.npc[num].height);
                 Main.npc[num].ai[0] = 0;
                 Main.npc[num].ai[1] = 0;

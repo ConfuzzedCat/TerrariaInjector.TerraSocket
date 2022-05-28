@@ -6,7 +6,7 @@ namespace TerraSocket
 {
     public class WebSocketServerHelper
     {
-        public WebSocketServerHelper(string ip = "ws://127.0.0.1", short port = 7394)
+        public WebSocketServerHelper(string ip = "127.0.0.1", short port = 7394)
         {
             wssv = InitializeServer(ip, port);
         }
@@ -16,9 +16,10 @@ namespace TerraSocket
         {
             wssv.Stop();
         }
-        public WebSocketServer InitializeServer(string ip = "ws://127.0.0.1", short port = 7394)
+        private WebSocketServer InitializeServer(string ip, short port)
         {
-            wssv = new WebSocketServer(ip + ':' + port);
+            string addr = $"ws://{ip}:{port}"; 
+            wssv = new WebSocketServer(addr);
             wssv.AddWebSocketService<Startup>("/");
             wssv.Start();
             Logger.Info($"WebSocket server started at \"{ip + ':' + port}\"");
