@@ -25,7 +25,7 @@
             {
                 MajorVersion = 1;
                 MinorVersion = 0;
-                PatchVersion = 0;
+                PatchVersion = 1;
             }
             public int MajorVersion { get; set; }
             public int MinorVersion { get; set; }
