@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 *.exe
 [Ll]ibs/
+/ReLogic.dll
