@@ -7,6 +7,9 @@ using System.Reflection;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Events;
+using Terraria.ID;
+using static Terraria.GameContent.Skies.CreditsRoll.Actions;
+using static TerraSocket.WebSocketMessageModel.ContextInfo;
 
 namespace TerraSocket
 {
@@ -69,6 +72,85 @@ namespace TerraSocket
         private static void Achievements_OnAchievementCompleted(Terraria.Achievements.Achievement achievement)
         {
             _server.SendWSMessage(new WebSocketMessageModel("AchievementCompleted", true, new WebSocketMessageModel.ContextInfo(Main.player[Main.myPlayer].name, achievement.Name)));
+        }
+        
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Player), nameof(Player.Hurt))]
+        public static void PlayerHurtPostfix(ref Player __instance, PlayerDeathReason damageSource, int Damage, int hitDirection, bool pvp = false, bool quiet = false, bool Crit = false, int cooldownCounter = -1)
+        {
+            string playerName = __instance.name;
+            if(__instance.statLife <= 0)
+            {
+                return;
+            }
+            if(damageSource.TryGetCausingEntity(out Entity entity))
+            {
+                string sourceType = string.Empty;
+                string sourceName = string.Empty;
+                if (Main.npc.IndexInRange(entity.whoAmI))
+                {
+                    NPC npc = Main.npc[entity.whoAmI];
+                    sourceType = "NPC";
+                    sourceName = npc.FullName;
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
+                    return;
+                }
+                if (Main.projectile.IndexInRange(entity.whoAmI))
+{
+                    Projectile projectile = Main.projectile[entity.whoAmI];
+                    sourceType = "PROJECTILE";
+                    sourceName = projectile.Name;
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
+                    return;
+                }
+                if (Main.player.IndexInRange(entity.whoAmI))
+                {
+                    Player player = Main.player[entity.whoAmI];
+                    sourceType = "PLAYER";
+                    sourceName = player.name;
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
+                    return;
+                }
+            }
+            _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, "NOTENTITY"))));
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Player),nameof(Player.KillMe))]
+        public static void PlayerKilledPostFix(ref Player __instance, PlayerDeathReason damageSource, double dmg, int hitDirection, bool pvp = false)
+        {
+            string playername = __instance.name;
+            if (damageSource.TryGetCausingEntity(out Entity entity))
+            {
+                string sourceType = string.Empty;
+                string sourceName = string.Empty;
+                if (Main.npc.IndexInRange(entity.whoAmI))
+                {
+                    NPC npc = Main.npc[entity.whoAmI];
+                    sourceType = "NPC";
+                    sourceName = npc.FullName;
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+                    return;
+                }
+                if (Main.projectile.IndexInRange(entity.whoAmI))
+                {
+                    Projectile projectile = Main.projectile[entity.whoAmI];
+                    sourceType = "PROJECTILE";
+                    sourceName = projectile.Name;
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+                    return;
+                }
+                if (Main.player.IndexInRange(entity.whoAmI))
+                {
+                    Player player = Main.player[entity.whoAmI];
+                    sourceType = "PLAYER";
+                    sourceName = player.name;
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+                    return;
+                }
+            }
+            _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, "NOTENTITY", null, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+
         }
 
         [HarmonyPostfix]

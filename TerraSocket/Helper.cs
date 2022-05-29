@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Graphics;
 using Terraria;
+using Terraria.DataStructures;
 using Terraria.GameContent;
 
 namespace TerraSocket
