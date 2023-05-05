@@ -32,7 +32,7 @@
             public int PatchVersion { get; set; }
             public string ToStringDot()
             {
-                return $"{MajorVersion}.{MinorVersion}.{PatchVersion}";
+                return string.Format("{0}.{1}.{2}",MajorVersion,MinorVersion,PatchVersion);
             }
         }
 

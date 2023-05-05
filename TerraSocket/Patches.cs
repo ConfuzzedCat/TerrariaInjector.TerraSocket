@@ -7,9 +7,8 @@ using System.Reflection;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Events;
+using TerrariaInjector;
 using Terraria.ID;
-using static Terraria.GameContent.Skies.CreditsRoll.Actions;
-using static TerraSocket.WebSocketMessageModel.ContextInfo;
 
 namespace TerraSocket
 {
@@ -17,53 +16,19 @@ namespace TerraSocket
     public class Patches
     {
         public static WebSocketServerHelper _server { get; set; }
-
-        // Start WS server at launch
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(Program), nameof(Program.LaunchGame))]
-        public static void StartWebSocketPreLaunch(string[] args, bool monoArgs = false)
-        {
-            string ipPath = Path.Combine(Directory.GetCurrentDirectory(), "wsipconfig.json");
-            ConfigModel config;
-            if (File.Exists(ipPath))
-            {
-                string ipcontent = File.ReadAllText(ipPath);
-                try
-                {
-                    config = JsonConvert.DeserializeObject<ConfigModel>(ipcontent);
-                }
-                catch (Exception e)
-                {
-                    Logger.Error("Invalid content in wsipconfig.json", e);
-                    config = DefaultIp();
-                    File.WriteAllText(ipPath, JsonConvert.SerializeObject(config));//TODO: make it nice!
-                }
-            }
-            else
-            {
-                config = DefaultIp();
-                File.WriteAllText(ipPath, JsonConvert.SerializeObject(config));//TODO: make it nice!
-            }
-            _server = new WebSocketServerHelper(config.Host, config.Port);
-        }
-
-        private static ConfigModel DefaultIp()
-        {
-            return new ConfigModel() {Host = "127.0.0.1", Port = 7394 };
-        }
-
-
+        
         //Stop WS server on "exit"
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Terraria.Social.SocialAPI), nameof(Terraria.Social.SocialAPI.Shutdown))]
+        [HarmonyPatch(typeof(Terraria.Social.SocialAPI), "Shutdown")]
         public static void CloseWebSocketPostfix()
         {
-            Logger.Info("WebSocket Closing");
+            GM.Logger.Info("WebSocket Closing");
+
             _server.CloseServer();
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Player), nameof(Player.LoadPlayer))]
+        [HarmonyPatch(typeof(Player), "LoadPlayer")]
         public static void LoadPlayerPostfix(string playerPath, bool cloudSave)
         {
             Main.Achievements.OnAchievementCompleted += Achievements_OnAchievementCompleted;
@@ -71,11 +36,12 @@ namespace TerraSocket
 
         private static void Achievements_OnAchievementCompleted(Terraria.Achievements.Achievement achievement)
         {
+
             _server.SendWSMessage(new WebSocketMessageModel("AchievementCompleted", true, new WebSocketMessageModel.ContextInfo(Main.player[Main.myPlayer].name, achievement.Name)));
         }
         
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Player), nameof(Player.Hurt))]
+        [HarmonyPatch(typeof(Player), "Hurt")]
         public static void PlayerHurtPostfix(ref Player __instance, PlayerDeathReason damageSource, int Damage, int hitDirection, bool pvp = false, bool quiet = false, bool Crit = false, int cooldownCounter = -1)
         {
             string playerName = __instance.name;
@@ -83,8 +49,8 @@ namespace TerraSocket
             {
                 return;
             }
-            if(damageSource.TryGetCausingEntity(out Entity entity))
-            {
+            bool TryGetCausingEntity = damageSource.TryGetCausingEntity(out Entity entity);
+            if(TryGetCausingEntity){
                 string sourceType = string.Empty;
                 string sourceName = string.Empty;
                 if (Main.npc.IndexInRange(entity.whoAmI))
@@ -92,15 +58,15 @@ namespace TerraSocket
                     NPC npc = Main.npc[entity.whoAmI];
                     sourceType = "NPC";
                     sourceName = npc.FullName;
-                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new WebSocketMessageModel.ContextInfo.ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
                     return;
                 }
                 if (Main.projectile.IndexInRange(entity.whoAmI))
-{
+                {
                     Projectile projectile = Main.projectile[entity.whoAmI];
                     sourceType = "PROJECTILE";
                     sourceName = projectile.Name;
-                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new WebSocketMessageModel.ContextInfo.ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
                     return;
                 }
                 if (Main.player.IndexInRange(entity.whoAmI))
@@ -108,17 +74,18 @@ namespace TerraSocket
                     Player player = Main.player[entity.whoAmI];
                     sourceType = "PLAYER";
                     sourceName = player.name;
-                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new WebSocketMessageModel.ContextInfo.ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, sourceType, sourceName))));
                     return;
                 }
             }
-            _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, "NOTENTITY"))));
+            _server.SendWSMessage(new WebSocketMessageModel("PlayerHurt", true, new WebSocketMessageModel.ContextInfo(playerName, new WebSocketMessageModel.ContextInfo.ContextPlayerDamage(playerName, Damage, Crit, pvp, quiet, hitDirection, "NOTENTITY"))));
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Player),nameof(Player.KillMe))]
+        [HarmonyPatch(typeof(Player),"KillMe")]
         public static void PlayerKilledPostFix(ref Player __instance, PlayerDeathReason damageSource, double dmg, int hitDirection, bool pvp = false)
         {
+
             string playername = __instance.name;
             if (damageSource.TryGetCausingEntity(out Entity entity))
             {
@@ -129,7 +96,7 @@ namespace TerraSocket
                     NPC npc = Main.npc[entity.whoAmI];
                     sourceType = "NPC";
                     sourceName = npc.FullName;
-                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new WebSocketMessageModel.ContextInfo.ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
                     return;
                 }
                 if (Main.projectile.IndexInRange(entity.whoAmI))
@@ -137,7 +104,7 @@ namespace TerraSocket
                     Projectile projectile = Main.projectile[entity.whoAmI];
                     sourceType = "PROJECTILE";
                     sourceName = projectile.Name;
-                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new WebSocketMessageModel.ContextInfo.ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
                     return;
                 }
                 if (Main.player.IndexInRange(entity.whoAmI))
@@ -145,11 +112,11 @@ namespace TerraSocket
                     Player player = Main.player[entity.whoAmI];
                     sourceType = "PLAYER";
                     sourceName = player.name;
-                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+                    _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new WebSocketMessageModel.ContextInfo.ContextPlayerKilled(playername, sourceType, sourceName, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
                     return;
                 }
             }
-            _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new ContextPlayerKilled(playername, "NOTENTITY", null, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
+            _server.SendWSMessage(new WebSocketMessageModel("PlayerKilled", true, new WebSocketMessageModel.ContextInfo(playername, new WebSocketMessageModel.ContextInfo.ContextPlayerKilled(playername, "NOTENTITY", null, __instance.statLife + (int)dmg, (int)dmg, __instance.statLife))));
 
         }
 
@@ -157,21 +124,29 @@ namespace TerraSocket
         [HarmonyPatch(typeof(Player), nameof(Player.OnHit))]
         public static void OnHitPostfix(float x, float y, Entity victim, ref Player __instance)
         {
-            if (victim is NPC _victim)
+            try
             {
-                string npcName = _victim.FullName;
-                string playerName = __instance.name;
-                if (Helper.IsItemNull(__instance, out Item item))
+                if (victim is NPC _victim)
                 {
-                    int damage = Helper.CalculateDamageForNPC(item.damage, _victim.defense);
-                    string itemName = item.HoverName;
-                    _server.SendWSMessage(new WebSocketMessageModel("NPCHit", true, new WebSocketMessageModel.ContextInfo(playerName, new WebSocketMessageModel.ContextInfo.ContextNPCDamage(npcName, null, itemName, playerName, _victim.life + damage, damage))));
+                    string npcName = _victim.FullName;
+                    string playerName = __instance.name;
+                    if (Helper.IsItemNull(__instance, out Item item))
+                    {
+                        int damage = Helper.CalculateDamageForNPC(item.damage, _victim.defense);
+                        string itemName = item.HoverName;
+                        _server.SendWSMessage(new WebSocketMessageModel("NPCHit", true, new WebSocketMessageModel.ContextInfo(playerName, new WebSocketMessageModel.ContextInfo.ContextNPCDamage(npcName, null, itemName, playerName, _victim.life + damage, damage))));
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                GM.Logger.Error($"OnHit failed. Entity: {victim}", e);
+            }
+            
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Player), nameof(Player.OnKillNPC))]
+        [HarmonyPatch(typeof(Player), "OnKillNPC")]
         public static void OnKillNPCPostfix(ref NPCKillAttempt attempt, object externalKillingBlowSource, ref Player __instance)
         {
             if (attempt.DidNPCDie())
@@ -186,7 +161,7 @@ namespace TerraSocket
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(NPC), nameof(NPC.NewNPC))]
+        [HarmonyPatch(typeof(NPC), "NewNPC")]
         public static void NPCSpawnPostfix(int __result, int X, int Y, int Type, int Start = 0, float ai0 = 0f, float ai1 = 0f, float ai2 = 0f, float ai3 = 0f, int Target = 255)
         {
             NPC npc = Main.npc[__result];
@@ -220,21 +195,21 @@ namespace TerraSocket
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Main), nameof(Main.StartSlimeRain))]
+        [HarmonyPatch(typeof(Main), "StartSlimeRain")]
         public static void RainSlimeEventPostfix(bool announce = true)
         {
             _server.SendWSMessage(new WebSocketMessageModel("SlimeRainEvent", true));
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Main), nameof(Main.AnglerQuestSwap))]
+        [HarmonyPatch(typeof(Main), "AnglerQuestSwap")]
         public static void NewAnglerQuestPostfix()
         {
             _server.SendWSMessage(new WebSocketMessageModel("AnglerQuestReset", true));
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(Player), nameof(Player.PetAnimal))]
+        [HarmonyPatch(typeof(Player), "PetAnimal")]
         public static void PetAnimalPostfix(int animalNpcIndex, ref Player __instance)
         {
             NPC pet = Main.npc[animalNpcIndex];
@@ -259,93 +234,96 @@ namespace TerraSocket
     [HarmonyPatch]
     class UpdatePatch
     {
-        public static bool EventIsPartyUp { get; private set; } = false;
-        public static bool EventIsSandstormThere { get; private set; } = false;
-        public static bool EventIsDD2There { get; private set; } = false;
-        public static bool EventIsPumpkinMoonThere { get; private set; } = false;
-        public static bool EventIsSnowMoonThere { get; private set; } = false;
-        public static bool EventIsBloodMoonThere { get; private set; } = false;
+        public static bool EventIsPartyUp { get; private set; }
+        public static bool EventIsSandstormThere { get; private set; }
+        public static bool EventIsDD2There { get; private set; }
+        public static bool EventIsPumpkinMoonThere { get; private set; }
+        public static bool EventIsSnowMoonThere { get; private set; }
+        public static bool EventIsBloodMoonThere { get; private set; }
         static MethodBase TargetMethod()
         {
-            return typeof(Main).GetMethod("Update", BindingFlags.NonPublic|BindingFlags.Instance);
+            return typeof(Main).GetMethod("DoUpdateInWorld", BindingFlags.NonPublic|BindingFlags.Instance);
         }
-        static void Prefix() 
+        static void Prefix()
         {
-            if (BirthdayParty.PartyIsUp)
+            if (ModHelpers.Tools.IsLocalPlayerFreeForAction())
             {
-                if (!EventIsPartyUp)
+                if (BirthdayParty.PartyIsUp)
                 {
-                    EventIsPartyUp = true;
-                    Patches._server.SendWSMessage(new WebSocketMessageModel("PartyEvent", true));
+                    if (!EventIsPartyUp)
+                    {
+                        EventIsPartyUp = true;
+                        Patches._server.SendWSMessage(new WebSocketMessageModel("PartyEvent", true));
+                    }
                 }
-            }
-            else
-            {
-                EventIsPartyUp = false;
-            }
+                else
+                {
+                    EventIsPartyUp = false;
+                }
 
-            if (Sandstorm.Happening)
-            {
-                if (!EventIsSandstormThere)
+                if (Sandstorm.Happening)
                 {
-                    EventIsSandstormThere = true;
-                    Patches._server.SendWSMessage(new WebSocketMessageModel("SandstormEvent", true));
+                    if (!EventIsSandstormThere)
+                    {
+                        EventIsSandstormThere = true;
+                        Patches._server.SendWSMessage(new WebSocketMessageModel("SandstormEvent", true));
+                    }
                 }
-            }
-            else
-            {
-                EventIsSandstormThere = false;
-            }
+                else
+                {
+                    EventIsSandstormThere = false;
+                }
 
-            if (DD2Event.Ongoing)
-            {
-                if (!EventIsDD2There)
+                if (DD2Event.Ongoing)
                 {
-                    Patches._server.SendWSMessage(new WebSocketMessageModel("DD2Event", true));
+                    if (!EventIsDD2There)
+                    {
+                        Patches._server.SendWSMessage(new WebSocketMessageModel("DD2Event", true));
+                    }
                 }
-            }
-            else
-            {
-                EventIsDD2There = false;
-            }
+                else
+                {
+                    EventIsDD2There = false;
+                }
 
-            if (Main.pumpkinMoon)
-            {
-                if (!EventIsPumpkinMoonThere)
+                if (Main.pumpkinMoon)
                 {
-                    EventIsPumpkinMoonThere = true;
-                    Patches._server.SendWSMessage(new WebSocketMessageModel("PumpkinMoonEvent", true));
+                    if (!EventIsPumpkinMoonThere)
+                    {
+                        EventIsPumpkinMoonThere = true;
+                        Patches._server.SendWSMessage(new WebSocketMessageModel("PumpkinMoonEvent", true));
+                    }
                 }
-            }
-            else
-            {
-                EventIsPumpkinMoonThere = false;
-            }
+                else
+                {
+                    EventIsPumpkinMoonThere = false;
+                }
 
-            if (Main.snowMoon)
-            {
-                if (!EventIsSnowMoonThere)
+                if (Main.snowMoon)
                 {
-                    EventIsSnowMoonThere = true;
-                    Patches._server.SendWSMessage(new WebSocketMessageModel("SnowMoonEvent", true));
+                    if (!EventIsSnowMoonThere)
+                    {
+                        EventIsSnowMoonThere = true;
+                        Patches._server.SendWSMessage(new WebSocketMessageModel("SnowMoonEvent", true));
+                    }
                 }
-            }
-            else
-            {
-                EventIsSnowMoonThere = false;
-            }
+                else
+                {
+                    EventIsSnowMoonThere = false;
+                }
 
-            if (Main.bloodMoon)
-            {
-                if (!EventIsBloodMoonThere)
+                if (Main.bloodMoon)
                 {
-                    EventIsBloodMoonThere = true;
-                    Patches._server.SendWSMessage(new WebSocketMessageModel("BloodMoonEvent", true));
+                    if (!EventIsBloodMoonThere)
+                    {
+                        EventIsBloodMoonThere = true;
+                        Patches._server.SendWSMessage(new WebSocketMessageModel("BloodMoonEvent", true));
+                    }
                 }
-            }
-            else
-            {
-                EventIsBloodMoonThere = false;
+                else
+                {
+                    EventIsBloodMoonThere = false;
+                }
             }
         }
     }

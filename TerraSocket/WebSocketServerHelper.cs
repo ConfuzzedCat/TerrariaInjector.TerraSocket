@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using TerrariaInjector;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -12,17 +13,18 @@ namespace TerraSocket
         }
 
         public static WebSocketServer wssv { get; set; }
+        internal static WebSocketSessionManager SessionManager;
         public void CloseServer()
         {
             wssv.Stop();
         }
         private WebSocketServer InitializeServer(string ip, ushort port)
         {
-            string addr = $"ws://{ip}:{port}"; 
+            string addr = string.Format("ws://{0}:{1}",ip,port); 
             wssv = new WebSocketServer(addr);
             wssv.AddWebSocketService<Startup>("/");
             wssv.Start();
-            Logger.Info($"WebSocket server started at \"{ip + ':' + port}\"");
+            GM.Logger.Info(string.Format("WebSocket server started at \"{0}:{1}\"",ip,port));
             return wssv;
         }
         public void SendWSMessage(WebSocketMessageModel msg)
@@ -30,12 +32,12 @@ namespace TerraSocket
             string jsonMessage = JsonConvert.SerializeObject(msg);
             if (!(wssv is null))
             {
-                wssv.WebSocketServices.Broadcast(jsonMessage);
-                Logger.Info($"\"{msg.Event}\" sent to clients.");
+                SessionManager.Broadcast(jsonMessage);
+                GM.Logger.Info(string.Format("\"{0}\" sent to clients.",msg.Event));
             }
             else
             {
-                Logger.Warn("WebSocket Server not found.");
+                GM.Logger.Warning("WebSocket Server not found.");
             }
 
         }
@@ -44,23 +46,24 @@ namespace TerraSocket
     {
         protected override void OnClose(CloseEventArgs e)
         {
-            Logger.Info($"Client Disconnected. ID:{ID}");
+            GM.Logger.Info(string.Format("Client Disconnected. ID:{0}",ID));
             base.OnClose(e);
         }
         protected override void OnOpen()
         {
-            Logger.Info($"Client joined. ID:{ID}");
+            GM.Logger.Info(string.Format("Client joined. ID:{0}",ID));
+            WebSocketServerHelper.SessionManager = Sessions;
             base.OnOpen();
         }
         protected override void OnMessage(MessageEventArgs e)
         {
-            Logger.Info($"Message received: {e.Data}");
+            GM.Logger.Info(string.Format("Message received: {0}",e.Data));
             Commands.CommandHandler(e.Data);
             base.OnMessage(e);
         }
         protected override void OnError(ErrorEventArgs e)
         {
-            Logger.Error("WebSocket Error", e.Exception);
+            GM.Logger.Error("WebSocket Error", e.Exception);
             base.OnError(e);
         }
     }

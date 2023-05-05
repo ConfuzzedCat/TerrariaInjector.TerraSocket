@@ -25,7 +25,7 @@ namespace TerraSocket
         }
         public static void DrawModOnMenu(Color menuColor)
         {
-            string text = $"TerraSocket - v{new WebSocketMessageModel.SemVersion().ToStringDot()}";
+            string text = string.Format("TerraSocket - v{0}",new WebSocketMessageModel.SemVersion().ToStringDot());
             Vector2 vector = FontAssets.MouseText.Value.MeasureString(text);
             vector.X *= 0.5f;
             vector.Y *= 0.5f;

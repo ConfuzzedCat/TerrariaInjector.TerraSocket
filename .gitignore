@@ -365,3 +365,5 @@ FodyWeavers.xsd
 *.exe
 [Ll]ibs/
 /ReLogic.dll
+/TerraSocket/References
+/TerraSocket/build.bat

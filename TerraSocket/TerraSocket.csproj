@@ -9,11 +9,12 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TerraSocket</RootNamespace>
     <AssemblyName>TerraSocket</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -23,6 +24,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,6 +33,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
@@ -40,6 +43,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\x86\Release\</OutputPath>
@@ -49,6 +53,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
@@ -67,14 +72,9 @@
       <HintPath>..\Terraria.exe</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TerrariaInjector">
-      <HintPath>..\TerrariaInjector.exe</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="websocket-sharp">
-      <HintPath Condition="Exists('Mods\Libs\websocket-sharp.dll')">Mods\Libs\websocket-sharp.dll</HintPath>
-      <HintPath Condition="Exists('Libs\websocket-sharp.dll')">Libs\websocket-sharp.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="TerrariaInjector, Version=1.2.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\SteamLibrary\steamapps\common\Terraria\TerrariaInjector.exe</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath Condition="Exists('Mods\Libs\Newtonsoft.Json.dll')">Mods\Libs\Newtonsoft.Json.dll</HintPath>
@@ -88,14 +88,19 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="websocket-sharp">
+      <HintPath>D:\SteamLibrary\steamapps\common\Terraria\Mods\Libs\websocket-sharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandModel.cs" />
     <Compile Include="Commands.cs" />
     <Compile Include="ConfigModel.cs" />
     <Compile Include="Helper.cs" />
+    <Compile Include="ModHelpers.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TerraSocket.cs" />
     <Compile Include="WebSocketMessageModel.cs" />
     <Compile Include="WebSocketServerHelper.cs" />
   </ItemGroup>
